@@ -1,0 +1,50 @@
+<!doctype html><html><head><meta charset="utf-8"><title>U7 preview</title>
+<style>html,body{margin:0;height:100%;background:#0b0d11;overflow:hidden}canvas{width:100%;height:100%;display:block}
+#hud{position:fixed;left:14px;top:12px;color:#8b93a1;font:11px/1.7 monospace;letter-spacing:.12em;z-index:9}</style>
+</head><body>
+<div id="hud">CONNECT U7 — preview</div>
+<canvas id="app"></canvas>
+<script src="playcanvas-stable.min.js"></script>
+<script>
+const canvas = document.getElementById('app');
+const app = new pc.Application(canvas, { graphicsDeviceOptions: { antialias: true, alpha: false } });
+app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
+app.setCanvasResolution(pc.RESOLUTION_AUTO);
+window.addEventListener('resize', () => app.resizeCanvas());
+app.start();
+
+// Dielectrics with low roughness need something to reflect or they read black.
+// The real scene supplies an environment; the preview fakes it with ambient.
+app.scene.ambientLight = new pc.Color(0.34, 0.36, 0.40);
+
+const cam = new pc.Entity('camera');
+cam.addComponent('camera', { clearColor: new pc.Color(0.043, 0.051, 0.067), fov: 32 });
+cam.setPosition(0.18, 0.10, 0.42);
+cam.lookAt(0, 0, 0);
+app.root.addChild(cam);
+
+function light(x, y, z, intensity, color) {
+  const l = new pc.Entity();
+  l.addComponent('light', { type: 'directional', color: color || new pc.Color(1,1,1), intensity, castShadows: false });
+  l.setPosition(x, y, z); l.lookAt(0, 0, 0);
+  app.root.addChild(l);
+}
+light(0.5, 0.8, 0.6, 2.2);
+light(-0.7, 0.3, 0.4, 1.2, new pc.Color(0.7, 0.8, 1.0));
+light(0.2, -0.5, -0.6, 0.9, new pc.Color(1.0, 0.85, 0.7));
+
+const asset = new pc.Asset('u7', 'container', { url: 'files/custom/connect_u7.glb' });
+app.assets.add(asset);
+app.assets.load(asset);
+asset.ready(() => {
+  const e = asset.resource.instantiateRenderEntity();
+  app.root.addChild(e);
+  const names = [];
+  e.forEach(n => { if (n.render) names.push(n.name); });
+  document.getElementById('hud').textContent =
+    'CONNECT U7 — ' + names.length + ' qism: ' + names.join(', ');
+  let t = 0;
+  app.on('update', dt => { t += dt; e.setEulerAngles(0, t * 22, 0); });
+});
+asset.on('error', err => { document.getElementById('hud').textContent = 'XATO: ' + err; });
+</script></body></html>
