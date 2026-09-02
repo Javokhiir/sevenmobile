@@ -1,10 +1,12 @@
 """Builds public/experience/files/custom/connect_u7.glb for the PlayCanvas experience.
 
-The phone is a rounded slab whose front and back faces are textured with the
-product renders in public/product, so the screen, bezels, lens rings, flash and
-7TECH wordmark are the real ones. Lens rings, side buttons and the internals
-(battery, board, chip) are real geometry, since the scene's data-scan effect
-reveals the inside. Units are metres, +Z is the screen side, +X the button side.
+The phone is a rounded slab whose back face is textured with the product render
+in public/product, so the lens rings, flash and 7TECH wordmark are the real ones.
+The screen is not a render: it is black with the 7TECH wordmark, rasterised from
+the same outlines the splash and header use. Lens rings, side buttons and the
+internals (battery, board, chip) are real geometry, since the scene's data-scan
+effect reveals the inside. Units are metres, +Z is the screen side, +X the
+button side.
 
 Run from the repo root: python3 tools/build_phone_glb.py
 """
@@ -13,9 +15,10 @@ import io
 import json
 import math
 import os
+import re
 import struct
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageEnhance
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PRODUCT = os.path.join(ROOT, "public", "product")
@@ -26,13 +29,16 @@ RC = 0.0066          # body corner radius
 RF = 0.0022          # edge fillet on front and back
 TEX_W, TEX_H = 1024, 2048
 
-# Screen quad in u7-black-front.webp: vertical left/right edges, the top edge
-# slopes with the render's slight yaw, the bottom edge is level.
-FRONT_SRC = "u7-black-front.webp"
-SCREEN_X0, SCREEN_X1 = 12, 417
-SCREEN_BOTTOM = 1366
-def screen_top(x):
-    return 73.0 - 0.16748 * (x - 113)
+# The screen: black, with the wordmark read out of the one file that holds it.
+# The punch-hole and the in-display print reader are drawn a few values off the
+# black so they read as hardware on an unlit screen rather than as UI.
+LOGO_SRC = os.path.join(ROOT, "public", "experience", "brand-logo.js")
+SCREEN_RGB = (6, 6, 8)
+LOGO_WIDTH = 0.56          # of the screen width
+CAMERA = (0.5, 0.026, 0.062)     # centre x, centre y, diameter, of the screen
+CAMERA_RGB, CAMERA_RIM_RGB = (16, 16, 20), (44, 44, 50)
+PRINT = (0.5, 0.845, 0.15)       # same, width of the fingerprint mark
+PRINT_RGB = (74, 74, 82)
 
 BEZEL_SIDE, BEZEL_TOP, BEZEL_BOTTOM, SCREEN_RADIUS = 0.0021, 0.0038, 0.0046, 0.005
 
@@ -203,8 +209,15 @@ def build_internals(meshes):
     add_box(battery, (0, -0.020, 0), (0.060, 0.096, 0.0040))
     board = Mesh("mainboard", "pcb")
     add_box(board, (0, 0.036, 0.0004), (0.064, 0.044, 0.0010))
-    chip = Mesh("chip", "chip")
-    add_box(chip, (0, 0.030, 0.0016), (0.013, 0.013, 0.0014))
+    # The die carries the processor render, so the scan reveals a processor
+    # rather than a gold block. Mirrored in u like the back face, since that is
+    # the side it is read from.
+    chip = Mesh("chip", "chip_die")
+    # Behind the board, not on top of it: the back is the side the scan opens,
+    # and the board would otherwise sit in front of the die.
+    cw, cy = 0.017, 0.030
+    add_box(chip, (0, cy, -0.0009), (cw, cw, 0.0014),
+            lambda x, y: (0.5 - x / cw, 0.5 - (y - cy) / cw))
     shield = Mesh("shields", "shield")
     add_box(shield, (0.021, 0.038, 0.0016), (0.017, 0.022, 0.0012))
     add_box(shield, (-0.021, 0.030, 0.0016), (0.014, 0.012, 0.0012))
@@ -231,8 +244,87 @@ def build_chip_face(meshes):
 
 # ---------- textures ----------
 
+def logo_mask(width):
+    """The 7TECH wordmark from brand-logo.js as an alpha mask `width` px wide."""
+    js = open(LOGO_SRC, encoding="utf-8").read()
+    vb = [float(v) for v in re.search(r'viewBox="([^"]+)"', js).group(1).split()]
+    ss = 4                                    # supersample, then downscale
+    scale = width * ss / vb[2]
+    img = Image.new("L", (width * ss, int(round(vb[3] * scale))), 0)
+    draw = ImageDraw.Draw(img)
+    for d in re.findall(r'\sd="([^"]+)"', js):
+        for poly in path_polygons(d):
+            draw.polygon([(x * scale, y * scale) for x, y in poly], fill=255)
+    return img.resize((width, img.height // ss), Image.LANCZOS)
+
+
+def path_polygons(d, steps=16):
+    """Absolute M/L/H/V/C/Z path data as closed polylines. The wordmark has no
+    holes, so a plain polygon fill per subpath is enough."""
+    toks = re.findall(r"[A-Z]|-?\d*\.?\d+(?:[eE][-+]?\d+)?", d)
+    polys, pts, cmd, x, y, i = [], [], None, 0.0, 0.0, 0
+    while i < len(toks):
+        if toks[i].isalpha():
+            cmd = toks[i]
+            i += 1
+            if cmd == "Z":
+                if len(pts) > 2:
+                    polys.append(pts)
+                pts = []
+                continue
+        n = lambda k: float(toks[i + k])
+        if cmd in ("M", "L"):
+            x, y = n(0), n(1); i += 2
+            pts = [(x, y)] if cmd == "M" else pts + [(x, y)]
+        elif cmd == "H":
+            x = n(0); i += 1; pts.append((x, y))
+        elif cmd == "V":
+            y = n(0); i += 1; pts.append((x, y))
+        elif cmd == "C":
+            x1, y1, x2, y2, x3, y3 = (n(k) for k in range(6)); i += 6
+            for s in range(1, steps + 1):
+                t, u = s / steps, 1 - s / steps
+                pts.append((u * u * u * x + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3,
+                            u * u * u * y + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3))
+            x, y = x3, y3
+        else:
+            raise ValueError("unsupported path command %r" % cmd)
+    if len(pts) > 2:
+        polys.append(pts)
+    return polys
+
+
+def hardware_mask(sw, sh, draw_fn):
+    """Screen-sized alpha mask, drawn at 4x because PIL's arcs have no AA."""
+    ss = 4
+    img = Image.new("L", (sw * ss, sh * ss), 0)
+    draw_fn(ImageDraw.Draw(img), sw * ss, sh * ss, ss)
+    return img.resize((sw, sh), Image.LANCZOS)
+
+
+def camera_hole(draw, w, h, ss):
+    cx, cy, r = CAMERA[0] * w, CAMERA[1] * h, CAMERA[2] * w / 2
+    draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=255)
+
+
+def camera_marks(draw, w, h, ss):
+    cx, cy, r = CAMERA[0] * w, CAMERA[1] * h, CAMERA[2] * w / 2 + 1.2 * ss
+    draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=255)
+
+
+def print_marks(draw, w, h, ss):
+    """The print reader: nested ridges, open at the bottom like the render's."""
+    cx, cy, r = PRINT[0] * w, PRINT[1] * h, PRINT[2] * w / 2
+    line = max(1, int(round(1.4 * ss)))
+    for k in (1.0, 0.78, 0.56, 0.34, 0.14):
+        rr = r * k
+        draw.arc((cx - rr, cy - rr, cx + rr, cy + rr), 180, 360, fill=255, width=line)
+        tail = r * 0.85 * k
+        for sx in (-1, 1):
+            draw.line((cx + sx * rr, cy, cx + sx * rr, cy + tail), fill=255, width=line)
+
+
 def make_front_texture():
-    src = Image.open(os.path.join(PRODUCT, FRONT_SRC)).convert("RGB")
     px_mm = TEX_W / (W * 1000)
     full_h = int(round(H * 1000 * px_mm))
     img = Image.new("RGB", (TEX_W, full_h), (3, 3, 4))
@@ -241,13 +333,12 @@ def make_front_texture():
     sy0 = int(round(BEZEL_TOP * 1000 * px_mm)); sy1 = full_h - int(round(BEZEL_BOTTOM * 1000 * px_mm))
     sw, sh = sx1 - sx0, sy1 - sy0
 
-    screen = Image.new("RGB", (sw, sh))
-    for X in range(sw):
-        xs = SCREEN_X0 + (SCREEN_X1 - SCREEN_X0) * X / (sw - 1)
-        xi = int(round(xs))
-        top = int(round(screen_top(xs)))
-        col = src.crop((xi, top, xi + 1, SCREEN_BOTTOM)).resize((1, sh), Image.LANCZOS)
-        screen.paste(col, (X, 0))
+    screen = Image.new("RGB", (sw, sh), SCREEN_RGB)
+    logo = logo_mask(int(round(sw * LOGO_WIDTH)))
+    screen.paste((255, 255, 255), ((sw - logo.width) // 2, (sh - logo.height) // 2), logo)
+    screen.paste(CAMERA_RIM_RGB, (0, 0), hardware_mask(sw, sh, camera_marks))
+    screen.paste(CAMERA_RGB, (0, 0), hardware_mask(sw, sh, camera_hole))
+    screen.paste(PRINT_RGB, (0, 0), hardware_mask(sw, sh, print_marks))
 
     mask = Image.new("L", (sw, sh), 0)
     ImageDraw.Draw(mask).rounded_rectangle((0, 0, sw - 1, sh - 1), radius=int(SCREEN_RADIUS * 1000 * px_mm), fill=255)
@@ -265,6 +356,16 @@ def make_back_texture():
 def make_chip_texture():
     src = Image.open(os.path.join(ROOT, "public", CHIP_SRC)).convert("RGBA")
     return src.crop(CHIP_CROP).resize((CHIP_TEX, CHIP_TEX), Image.LANCZOS)
+
+
+def make_die_texture():
+    """The same render on black. The callout's glow is transparent, and the
+    internal die is opaque geometry, so it gets flattened out. Lifted well off
+    the black too: it is read through the scan, under a half-faded shell, where
+    the render's own near-black package would disappear."""
+    base = Image.new("RGBA", (CHIP_TEX, CHIP_TEX), (18, 18, 22, 255))
+    base.alpha_composite(make_chip_texture())
+    return ImageEnhance.Brightness(base.convert("RGB")).enhance(1.9)
 
 
 def jpeg_bytes(img, quality=92):
@@ -360,7 +461,8 @@ def main():
          "extensions": {"KHR_materials_clearcoat": {"clearcoatFactor": 1.0, "clearcoatRoughnessFactor": 0.05}}},
         {"name": "battery", "pbrMetallicRoughness": {"baseColorFactor": [0.16, 0.17, 0.19, 1], "metallicFactor": 0.3, "roughnessFactor": 0.55}},
         {"name": "pcb", "pbrMetallicRoughness": {"baseColorFactor": [0.06, 0.14, 0.10, 1], "metallicFactor": 0.2, "roughnessFactor": 0.6}},
-        {"name": "chip", "pbrMetallicRoughness": {"baseColorFactor": [0.75, 0.62, 0.30, 1], "metallicFactor": 0.9, "roughnessFactor": 0.3}},
+        {"name": "chip_die", "pbrMetallicRoughness": {"baseColorTexture": {"index": 3}, "metallicFactor": 0.15, "roughnessFactor": 0.5},
+         "emissiveTexture": {"index": 3}, "emissiveFactor": [0.85, 0.85, 0.85]},
         {"name": "shield", "pbrMetallicRoughness": {"baseColorFactor": [0.70, 0.72, 0.75, 1], "metallicFactor": 1.0, "roughnessFactor": 0.4}},
         # Unlit on purpose: the callout has to read the same wherever the phone
         # is in the scene, so the render is carried by emissive alone.
@@ -370,7 +472,8 @@ def main():
     ]
     images = [("front", jpeg_bytes(make_front_texture()), "image/jpeg"),
               ("back", jpeg_bytes(make_back_texture()), "image/jpeg"),
-              ("chip", png_bytes(make_chip_texture()), "image/png")]
+              ("chip", png_bytes(make_chip_texture()), "image/png"),
+              ("die", jpeg_bytes(make_die_texture()), "image/jpeg")]
     data = write_glb(meshes, images, materials)
     with open(OUT, "wb") as f:
         f.write(data)

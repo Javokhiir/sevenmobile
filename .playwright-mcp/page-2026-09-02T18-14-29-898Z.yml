@@ -1,0 +1,15 @@
+- generic [active]:
+  - iframe [ref=f24e1]:
+    - generic [ref=f25e3]:
+      - generic [ref=f25e13]:
+        - generic [ref=f25e20]:
+          - generic [ref=f25e21]: "0"
+          - generic [ref=f25e22]: "5"
+        - generic [ref=f25e23]: "%"
+      - generic [ref=f25e24]:
+        - generic [ref=f25e25]: INTELLIGENCE AT PLANETARY SCALE
+        - generic [ref=f25e26]: Orchestrating the foundation of artificial intelligence from the edge of the atmosphere.
+        - generic [ref=f25e27]: INITIATE SYSTEM
+      - generic: Experience with headphones
+  - button "Open Next.js Dev Tools" [ref=f24e7] [cursor=pointer]
+  - alert [ref=f24e11]

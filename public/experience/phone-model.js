@@ -9,7 +9,10 @@
     var cfg = window.__phone = {
         scale: 20,
         poses: {
-            p1Pos: [1.3, -1.0, -1.8],   p1Rot: [-60, 40, 25],
+            // Pose 1 is off-frame. At 1.8 m the frustum is only ~1.2 wide, and
+            // the phone is ~1.8 across at that scale, so it needs to start well
+            // past 3 or its corner is already in shot before the fly-in.
+            p1Pos: [3.4, -2.6, -1.8],   p1Rot: [-60, 40, 25],
             p2Pos: [0.25, 0.05, -2.5],  p2Rot: [8, -28, -6],
             p2PosMobile: [0.1, 0.5, -3.6],
             p3Pos: [0.05, 0, -1.7],     p3Rot: [10, 155, 0],
@@ -47,9 +50,15 @@
         sat.addChild(phone);
 
         // The processor callout lights itself and owns its own alpha, so it has
-        // to stay out of the data-scan's material takeover.
+        // to stay out of the data-scan's material takeover. The frame and the
+        // buttons are out for a different reason: the scan is for the back, and
+        // leaving them in lets it open up the sides of the phone as well.
         var chipFace = phone.findByName('chip_face');
         if (chipFace) chipFace.tags.add('no-scan');
+        ['frame', 'buttons'].forEach(function (n) {
+            var e = phone.findByName(n);
+            if (e) e.tags.add('no-scan');
+        });
 
         // Script attributes are re-applied from the scene data during
         // initialise, so the pose and fit overrides go in after that.
@@ -67,6 +76,23 @@
         };
         app.once('postinitialize', function () {
             applyPoses();
+            // The scan is for the back. Authored for the satellite it ran from
+            // the start and faded out at 0.08, which on the phone is the front
+            // view, so it X-rayed the board through the screen. It moves to the
+            // stretch where the back is turned to the camera instead, and the
+            // circle is kept small.
+            var scan = sat.script.dataScan;
+            if (scan) {
+                scan.radius = 0.055;
+                scan.speedToSize = 0.5;
+                scan.disableProgress = 0.1;
+                scan.disableFade = 0.02;
+                // Armed only while the back is turned to the camera: before
+                // that it is the screen, after it the phone is on its way out.
+                var arm = function (p) { scan.enabled = p >= 0.045 && p < 0.12; };
+                arm(0);
+                EventBus.on('scroll:progress', arm);
+            }
             window.addEventListener('resize', applyPoses);
             var plexus = sat.findByName('plexus');
             if (plexus && plexus.script && plexus.script.plexus) plexus.script.plexus.fitTarget = phone;

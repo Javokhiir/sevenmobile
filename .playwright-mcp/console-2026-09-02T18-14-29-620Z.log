@@ -1,0 +1,19 @@
+[     103ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:776
+[     135ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_1e8vcs8._.js:776
+[     457ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/experience/files/assets/299520427/1/AICHIP.ogg?t=9a45efbf2e6c104ac0c35e77f7d6c10e:0
+[     687ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/experience/files/assets/299520427/1/AICHIP.ogg?t=9a45efbf2e6c104ac0c35e77f7d6c10e:0
+[    1105ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/experience/files/assets/299520427/1/AICHIP.ogg?t=9a45efbf2e6c104ac0c35e77f7d6c10e:0
+[    1930ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/experience/files/assets/299520427/1/AICHIP.ogg?t=9a45efbf2e6c104ac0c35e77f7d6c10e:0
+[    3557ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/experience/files/assets/299520427/1/AICHIP.ogg?t=9a45efbf2e6c104ac0c35e77f7d6c10e:0
+[    6783ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/experience/files/assets/299520427/1/AICHIP.ogg?t=9a45efbf2e6c104ac0c35e77f7d6c10e:0
+[    6828ms] [WARNING] [objectFade] Found NO mesh instances under "GDX-JOIN2 - FIXtop2" — nothing to fade. Is the script on the mesh (or its container root)? @ http://localhost:3000/experience/__game-scripts.js:0
+[    6832ms] [LOG] [CameraController] Ready. Timeline keyframes: 14 @ http://localhost:3000/experience/__game-scripts.js:0
+[    6832ms] [LOG] [LightManager] Ready. Managed lights: 6 @ http://localhost:3000/experience/__game-scripts.js:0
+[    6836ms] [LOG] [dataScan] ready on "StarlinkV2-1": 8 mesh instance(s), 8 material(s), proxy+eraser built. @ http://localhost:3000/experience/__game-scripts.js:0
+[    6838ms] [WARNING] [AudioManager] No slot named "satellite" @ http://localhost:3000/experience/__game-scripts.js:0
+[    6965ms] [WARNING] [trueGlass] No render/model component on "TOP" — nothing to apply the glass to. @ http://localhost:3000/experience/__game-scripts.js:0
+[    7184ms] [LOG] [setLayerRecursive] "cardsgroup" → layer "UILayer" applied to 5 render + 0 model components @ http://localhost:3000/experience/__game-scripts.js:0
+[    7627ms] [WARNING] [AudioManager] No slot named "satellite" @ http://localhost:3000/experience/__game-scripts.js:0
+[   10136ms] [LOG] [SceneManager] warm-up done in 3297 ms (incl. 2500 ms settle) @ http://localhost:3000/experience/__game-scripts.js:0
+[   11379ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/favicon.ico:0
+[   22719ms] [WARNING] [AudioManager] No slot named "datacenter" @ http://localhost:3000/experience/__game-scripts.js:0
