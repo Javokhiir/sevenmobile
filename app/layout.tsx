@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
-import { Orbitron, JetBrains_Mono } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { ExperienceProvider } from "@/lib/experience";
+import { I18nProvider } from "@/lib/i18n";
 
-// The same face the SABER wordmark outlines were cut from, so the mark and the
-// copy around it share one voice.
-const display = Orbitron({
-  variable: "--font-display",
-  subsets: ["latin"],
+// The one face the 7TECH storefront sets everything in. Cyrillic is loaded
+// alongside Latin because the Russian dictionary needs it.
+const sans = Montserrat({
+  variable: "--font-sans",
+  subsets: ["latin", "cyrillic"],
   weight: ["400", "500", "600", "700"],
-});
-
-const mono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -27,9 +22,12 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className={`${display.variable} ${mono.variable}`}>
-        <ExperienceProvider>{children}</ExperienceProvider>
+    // `lang` starts at the default and I18nProvider updates it on choice.
+    <html lang="uz">
+      <body className={sans.variable}>
+        <I18nProvider>
+          <ExperienceProvider>{children}</ExperienceProvider>
+        </I18nProvider>
       </body>
     </html>
   );

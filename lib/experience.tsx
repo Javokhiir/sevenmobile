@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
 import { Ambient } from "@/lib/ambient";
 
 type ExperienceValue = {
@@ -26,15 +27,18 @@ export function ExperienceProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  /** Only the landing route is gated; /shop and the rest scroll freely. */
+  const gated = pathname === "/";
   const [started, setStarted] = useState(false);
   const [audio, setAudio] = useState(true);
   const ambient = useRef<Ambient | null>(null);
 
   // Scrolling stays locked behind the preloader so the intro reads as a gate.
   useEffect(() => {
-    document.documentElement.classList.toggle("is-locked", !started);
+    document.documentElement.classList.toggle("is-locked", gated && !started);
     return () => document.documentElement.classList.remove("is-locked");
-  }, [started]);
+  }, [gated, started]);
 
   useEffect(() => () => ambient.current?.dispose(), []);
 

@@ -1,22 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Catalog } from "@/components/shop/catalog";
 
 export const metadata: Metadata = {
-  title: "SABER — Sotib olish",
+  title: "7TECH — Smartfonlar",
+  description:
+    "CONNECT U7 smartfoni: 8/128 GB va 8/256 GB, qora va oq ranglar. Toshkent bo'ylab bepul yetkazib berish.",
 };
 
-/** Placeholder for the commerce flow, built out separately. */
 export default function Page() {
-  return (
-    <div className="soon">
-      <p className="soon__kicker">7TECH · CONNECT U7</p>
-      <h1>Do&apos;kon tayyorlanmoqda</h1>
-      <p className="soon__note">
-        Narxlar, ranglar va buyurtma sahifasi shu yerda bo&apos;ladi.
-      </p>
-      <Link href="/" className="soon__back">
-        ← Bosh sahifa
-      </Link>
-    </div>
-  );
+  return <Catalog />;
 }
