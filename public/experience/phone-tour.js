@@ -56,7 +56,7 @@
     // while it runs and come back with it. Disabling their entities is no good:
     // hudText owns a DOM node and worldText a mesh in its own layer, and both
     // are left exactly as they were when the script stops running.
-    var QUIET = ['TitleRack', 'Racktxt', 'TitleChip', 'Chiptxt', 'text'];
+    var QUIET = ['TitleChip', 'Chiptxt', 'text'];
 
     function smooth(x) { return x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x); }
 

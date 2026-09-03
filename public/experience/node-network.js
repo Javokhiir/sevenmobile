@@ -29,6 +29,13 @@
         if (processor) processor.enabled = false;
         var chipcard = app.root.findByName('Chipcard');
         if (chipcard) chipcard.enabled = false;
+        // The 5G beat is out too. Disabled here rather than mid-scene: neither
+        // worldText nor hudText cleans up when its script stops, so the only
+        // way they never show is for their scripts never to start.
+        ['TitleRack', 'Racktxt'].forEach(function (n) {
+            var e = scene.findByName(n);
+            if (e) e.enabled = false;
+        });
         // The rack entity stays: objectFade drives it with the rest of the
         // scene. Only its meshes go.
         rack.forEach(function (e) {
