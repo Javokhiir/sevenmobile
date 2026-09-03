@@ -47,11 +47,12 @@
         mat.emissiveMap = tex.resource;
         mat.opacityMap = tex.resource;
         mat.opacityMapChannel = 'a';
-        // Cut out rather than blended. The map beat is drawn from the scene
-        // colour grab, which is taken before the transparent pass, so a blended
-        // die simply is not in the picture the HUD frame shows.
-        mat.blendType = pc.BLEND_NONE;
-        mat.alphaTest = 0.5;
+        // Blended, not alpha-tested: the die's halo fades out over ~40px of
+        // soft alpha, and a cutout turns that into a hard yellow edge.
+        mat.blendType = pc.BLEND_NORMAL;
+        // The die is a flat card in a scene full of volumetric light, so it
+        // reads better sorted by blending alone than punching a depth hole.
+        mat.depthWrite = false;
         mat.cull = pc.CULLFACE_NONE;
         mat.update();
 

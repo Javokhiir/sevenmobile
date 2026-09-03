@@ -19,9 +19,12 @@
             p4Pos: [0.8, -0.1, -2.6],   p4Rot: [15, 150, 10],
             // Pose 5 is where it parks and leaves the frame. Centred, because
             // scene 2's filaments start at that point and run down into the
-            // processor, so the exit and the node have to share an axis.
-            p5Pos: [0, 0.5, -4],        p5Rot: [40, -80, -140],
-            p3PosMobile: [0.05, -0.05, -2], p4PosMobile: [0.4, -0.3, -2.6], p5PosMobile: [0, 1.5, -8]
+            // processor, so the exit and the node have to share an axis. It
+            // parks in world space, so the height has to clear the top of the
+            // frame or the phone hangs over the die for the whole node beat;
+            // both values are ~1.8x the frustum's half height at their distance.
+            p5Pos: [0, 3, -4],          p5Rot: [40, -80, -140],
+            p3PosMobile: [0.05, -0.05, -2], p4PosMobile: [0.4, -0.3, -2.6], p5PosMobile: [0, 6, -8]
         },
         // Phone-local metres: the processor spot on the back, where the label
         // circle and the glow anchors sit. Scales are satellite-local, so 20x
