@@ -1,7 +1,6 @@
 // The underground network scene shipped with the template's server racks. The
 // phone is what this site is about, so the racks come out and the Connect U7
-// stands where the central one did. The floor, the lights and the processor
-// that flies in for the next beat are left alone.
+// stands where the central one did. The floor and the lights are left alone.
 (function () {
     var app = pc.Application.getApplication();
     if (!app) return;
@@ -22,6 +21,14 @@
         scene.children.forEach(function (c) {
             if (STRIP.indexOf(c.name) !== -1) c.enabled = false;
         });
+        // The template's generic die flew in here and rose again in the chip
+        // scene. The phone now carries that beat itself, and two anonymous
+        // chips in front of it read as leftovers. Their captions stay: they are
+        // the Dimensity's, and they sit over the phone instead.
+        var processor = scene.findByName('processor');
+        if (processor) processor.enabled = false;
+        var chipcard = app.root.findByName('Chipcard');
+        if (chipcard) chipcard.enabled = false;
         // The rack entity stays: objectFade drives it with the rest of the
         // scene. Only its meshes go.
         rack.forEach(function (e) {

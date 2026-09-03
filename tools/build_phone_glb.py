@@ -42,6 +42,9 @@ PRINT_RGB = (74, 74, 82)
 
 BEZEL_SIDE, BEZEL_TOP, BEZEL_BOTTOM, SCREEN_RADIUS = 0.0021, 0.0038, 0.0046, 0.005
 
+# The USB-C opening, half width and half height. Real connector, 8.4 x 2.6 mm.
+PORT_HOLE = (0.00420, 0.00130)
+
 # Body silhouette in u7-black-back.webp (the buttons poke out past x=5).
 BACK_SRC = "u7-black-back.webp"
 BACK_BODY = (5, 0, 656, 1400)
@@ -204,9 +207,37 @@ def build_buttons(meshes):
     meshes.append(m)
 
 
+def build_port(meshes):
+    """USB-C on the bottom edge. The body is a closed shell and cutting it would
+    mean rebuilding the frame band, so the port is laid on the surface: a black
+    floor at the connector's real size inside a bevel whose walls turn away from
+    the key. Depth beyond a fraction of a millimetre would be hidden by the
+    shell anyway, and what reads as an opening is the tone, not the parallax."""
+    m = Mesh("usb_port", "port_hole")
+    hw, hh = PORT_HOLE
+    y = -H / 2 - 0.00005
+    lip = rounded_rect(hw, hh, hh, 12)
+    k = 0.72
+    wall, floor = [], []
+    for (x, z), (nx, nz) in lip:
+        wall.append(m.vert((x, y, z), norm((-nx * 0.92, -0.4, -nz * 0.92)), (0, 0)))
+        floor.append(m.vert((x * k, y - 0.00002, z * k), (0, -1, 0), (0, 1)))
+    for i in range(len(wall)):
+        j = (i + 1) % len(wall)
+        m.tri(wall[i], floor[i], floor[j])
+        m.tri(wall[i], floor[j], wall[j])
+    c = m.vert((0, y - 0.00002, 0), (0, -1, 0), (0.5, 0.5))
+    base = [m.vert((x * k, y - 0.00002, z * k), (0, -1, 0), (0, 0)) for (x, z), _ in lip]
+    for i in range(len(base)):
+        m.tri(c, base[i], base[(i + 1) % len(base)])
+    meshes.append(m)
+
+
 def build_internals(meshes):
     battery = Mesh("battery", "battery")
-    add_box(battery, (0, -0.020, 0), (0.060, 0.096, 0.0040))
+    # Topped out below the board at 0.014: it used to run to 0.028, which put it
+    # up between the die and the bottom lens once the back opens.
+    add_box(battery, (0, -0.030, 0), (0.060, 0.076, 0.0040))
     board = Mesh("mainboard", "pcb")
     add_box(board, (0, 0.036, 0.0004), (0.064, 0.044, 0.0010))
     # The die carries the processor render, so the scan reveals a processor
@@ -447,6 +478,7 @@ def main():
     build_body(meshes)
     build_lenses(meshes)
     build_buttons(meshes)
+    build_port(meshes)
     build_internals(meshes)
     build_chip_face(meshes)
 
@@ -463,6 +495,7 @@ def main():
         {"name": "pcb", "pbrMetallicRoughness": {"baseColorFactor": [0.06, 0.14, 0.10, 1], "metallicFactor": 0.2, "roughnessFactor": 0.6}},
         {"name": "chip_die", "pbrMetallicRoughness": {"baseColorTexture": {"index": 3}, "metallicFactor": 0.15, "roughnessFactor": 0.5},
          "emissiveTexture": {"index": 3}, "emissiveFactor": [0.85, 0.85, 0.85]},
+        {"name": "port_hole", "doubleSided": True, "pbrMetallicRoughness": {"baseColorFactor": [0.004, 0.004, 0.005, 1], "metallicFactor": 0.0, "roughnessFactor": 0.95}},
         {"name": "shield", "pbrMetallicRoughness": {"baseColorFactor": [0.70, 0.72, 0.75, 1], "metallicFactor": 1.0, "roughnessFactor": 0.4}},
         # Unlit on purpose: the callout has to read the same wherever the phone
         # is in the scene, so the render is carried by emissive alone.
