@@ -17,14 +17,14 @@
             p2PosMobile: [0.1, 0.5, -3.6],
             p3Pos: [0.05, 0, -1.7],     p3Rot: [10, 155, 0],
             p4Pos: [0.8, -0.1, -2.6],   p4Rot: [15, 150, 10],
-            // Pose 5 is where it parks and leaves the frame. Centred, because
-            // scene 2's filaments start at that point and run down into the
-            // processor, so the exit and the node have to share an axis. It
-            // parks in world space, so the height has to clear the top of the
-            // frame or the phone hangs over the die for the whole node beat;
-            // both values are ~1.8x the frustum's half height at their distance.
-            p5Pos: [0, 3, -4],          p5Rot: [40, -80, -140],
-            p3PosMobile: [0.05, -0.05, -2], p4PosMobile: [0.4, -0.3, -2.6], p5PosMobile: [0, 6, -8]
+            // Pose 5 is where it parks. Centred, because scene 2's filaments
+            // start at that point and run down into the processor, so the exit
+            // and the node have to share an axis — and the phone is meant to be
+            // standing at the point the filaments come together, not above the
+            // frame. The heights put it ~0.42 of the frustum's half height over
+            // the camera axis at their distance, which is where they meet.
+            p5Pos: [0, 0.7, -4],        p5Rot: [40, -80, -140],
+            p3PosMobile: [0.05, -0.05, -2], p4PosMobile: [0.4, -0.3, -2.6], p5PosMobile: [0, 1.4, -8]
         },
         // Phone-local metres: the processor spot on the back, where the label
         // circle and the glow anchors sit. Scales are satellite-local, so 20x
@@ -79,6 +79,11 @@
         };
         app.once('postinitialize', function () {
             applyPoses();
+            // The scene's 7 s fly-in was timed for the satellite, which started
+            // just above the frame. The phone starts much further out, and with
+            // an ease-in-out that leaves it off-screen for the first seconds of
+            // the scene. Shorter, so it is in view while the opening still reads.
+            sat.script.satelliteMover.entryDuration = 4.6;
             // The scan is for the back. Authored for the satellite it ran from
             // the start and faded out at 0.08, which on the phone is the front
             // view, so it X-rayed the board through the screen. It moves to the
@@ -97,10 +102,34 @@
                 EventBus.on('scroll:progress', arm);
             }
             window.addEventListener('resize', applyPoses);
+            clearTheCity();
             var plexus = sat.findByName('plexus');
             if (plexus && plexus.script && plexus.script.plexus) plexus.script.plexus.fitTarget = phone;
             wireChipReveal();
         });
+
+        // The phone parks in world at the point the filaments come together, so
+        // it is standing there while the light gathers. The city beat that
+        // follows takes the camera straight past that spot, and parked at that
+        // height it hung over the map as a black sliver for the whole beat. It
+        // rises out of frame over the run-up to the map instead, and comes back
+        // down if the visitor scrolls up.
+        var LIFT_FROM = 0.15, LIFT_TO = 0.175, LIFT = 3.2;
+        var clearTheCity = function () {
+            var lift = 0, base = null;
+            EventBus.on('scroll:progress', function (p) {
+                var t = (p - LIFT_FROM) / (LIFT_TO - LIFT_FROM);
+                t = t < 0 ? 0 : t > 1 ? 1 : t;
+                lift = t * t * (3 - 2 * t) * LIFT;
+                if (lift <= 0) base = null;
+            });
+            // After the mover, which is the one writing the parked transform.
+            app.on('postUpdate', function () {
+                if (lift <= 0) return;
+                if (!base) base = sat.getPosition().clone();
+                sat.setPosition(base.x, base.y + lift, base.z);
+            });
+        };
 
         // The processor is under the back glass, so it stays dark until the
         // visitor hovers its label instead of glowing through the shell for the

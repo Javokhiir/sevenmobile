@@ -10,15 +10,20 @@
     // across, and the die fills about 90% of the source image's width.
     var WIDTH = 4.4;
     var ASPECT = 601 / 387;
-    // The mover shrinks the node to 0.05 as it settles onto the city, which
-    // leaves the die 60-odd pixels over a busy satellite image. Below this the
-    // holder scales back up, so the die stops shrinking and stays legible for
-    // the rest of the scene. It still hangs off the same entity, so it lands
-    // where it was going to land and rides the map's anchor from there.
+    // The mover shrinks the node from 0.4 to 0.05 as it settles onto the city,
+    // and the die has no business shrinking with it: it is a spec callout, and
+    // it read as two different objects, one big one small, either side of the
+    // descent. The holder cancels the node's scale outright and holds the die
+    // at this size for the whole beat — only the camera's own distance changes
+    // how big it looks, which is what makes it read as one object coming down.
     var MIN_HOST = 0.32;
-    var SETTLE_FROM = 0.185;    // scroll progress over which it lands
-    var SETTLE_TO = 0.225;
-    var LIFT = 0.45;            // world units above the map origin
+    var SETTLE_FROM = 0.175;    // scroll progress over which it lands
+    var SETTLE_TO = 0.235;
+    // The die lies on the city, barely off it — enough not to cut into the
+    // terrain, no more. Held further out it rode the anchor's up vector, and
+    // as the map tilted through the landing that swung it sideways, so it
+    // never read as coming straight down onto its spot.
+    var LIFT = 0.08;            // world units above the map origin
 
     app.once('start', function () {
         var node = app.root.find(function (e) { return e.script && e.script.diamondLabel; })
@@ -53,6 +58,12 @@
         // The die is a flat card in a scene full of volumetric light, so it
         // reads better sorted by blending alone than punching a depth hole.
         mat.depthWrite = false;
+        // Drawn over the terrain rather than tested against it. Lying on the
+        // city it is level with the relief and the ground buries it; the only
+        // way to keep it visible by depth alone is to hold it well clear, and
+        // that offset rides the anchor's up vector and swings it sideways as
+        // the map tilts. Off the test it sits on the city and stays readable.
+        mat.depthTest = false;
         mat.cull = pc.CULLFACE_NONE;
         mat.update();
 
@@ -71,6 +82,15 @@
             receiveShadows: false,
         });
         if (layers) card.render.layers = layers;
+        // The city itself is a blended material in the same layer, so the two
+        // are sorted against each other by distance — and lying on the ground
+        // the die is the same distance away as the terrain under it, which had
+        // the map painting over it for whole stretches of the beat. Sorted as
+        // if it were at the camera, it is always drawn last, and with the depth
+        // test off above that means it is never buried by the city.
+        card.render.meshInstances.forEach(function (mi) {
+            mi.calculateSortDistance = function () { return 0; };
+        });
         card.setLocalEulerAngles(90, 0, 0);
         card.setLocalScale(WIDTH, 1, WIDTH * ASPECT);
         holder.addChild(card);
@@ -95,16 +115,56 @@
         var flying = new pc.Vec3();
         var rot = new pc.Quat();
         var landedRot = new pc.Quat();
+        var scl = new pc.Vec3();
+
+        // World scale the die reads at while it rides the node: the holder
+        // cancels the node's own shrink down to MIN_HOST, so what is left is
+        // whatever the node's parent contributes.
+        function readScale() {
+            var par = node.parent;
+            if (par) par.getWorldTransform().getScale(scl); else scl.set(1, 1, 1);
+            return MIN_HOST * (scl.x || 1);
+        }
 
         app.on('update', function () {
-            var s = node.getLocalScale().x;
-            var k = s > 1e-4 && s < MIN_HOST ? MIN_HOST / s : 1;
-            holder.setLocalScale(k, k, k);
-            if (!map || !cam) return;
+            if (!map || !cam) {
+                var s0 = node.getLocalScale().x;
+                var k0 = s0 > 1e-4 ? MIN_HOST / s0 : 1;
+                holder.setLocalScale(k0, k0, k0);
+                return;
+            }
 
             var t = (progress - SETTLE_FROM) / (SETTLE_TO - SETTLE_FROM);
             t = t < 0 ? 0 : t > 1 ? 1 : t;
             t = t * t * (3 - 2 * t);
+
+            // Down and planted: the die comes off the node. The scene puts the
+            // node away once the city beat is running — it scales to nothing —
+            // and a child of it goes with it, which is what took the die off
+            // the map halfway through the beat.
+            if (t >= 1) {
+                // Parented to the world, not to the map: the map's own scale is
+                // uneven (its X is two thirds of its Z), and hanging off it the
+                // die came out both stretched and half again bigger than it was
+                // on the way down. It rides the map through the position and
+                // rotation set below instead, which is all it needs.
+                if (holder.parent !== app.root) app.root.addChild(holder);
+                var d = readScale();
+                holder.setLocalScale(d, d, d);
+                landed.copy(map.up).mulScalar(LIFT).add(map.getPosition());
+                holder.setPosition(landed);
+                // Flat on the terrain, rolled to the camera: the die lies on
+                // the city rather than facing it, but the print still has to
+                // read.
+                holder.lookAt(under.copy(landed).sub(map.up), cam.up);
+                return;
+            }
+
+            // Still on the way down (or scrolled back up above the window).
+            if (holder.parent !== node) node.addChild(holder);
+            var s = node.getLocalScale().x;
+            var k = s > 1e-4 ? MIN_HOST / s : 1;
+            holder.setLocalScale(k, k, k);
             if (t === 0) {
                 // Back on the node's own spot, where the filaments meet. The
                 // warm-up pass runs the whole timeline before the visitor
@@ -116,11 +176,7 @@
 
             landed.copy(map.up).mulScalar(LIFT).add(map.getPosition());
             holder.setPosition(landed);
-            // Flat on the terrain, rolled to the camera: the die lies on the
-            // city rather than facing it, but the print still has to read.
             holder.lookAt(under.copy(landed).sub(map.up), cam.up);
-            if (t >= 1) return;
-
             landedRot.copy(holder.getRotation());
             flying.copy(node.getPosition());
             holder.setPosition(flying.lerp(flying, landed, t));

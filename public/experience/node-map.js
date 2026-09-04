@@ -10,6 +10,32 @@
     if (!app) return;
 
     app.once('start', function () {
+        // Scene attributes are applied after the start event, so copy changes
+        // belong in postinitialize or the exported values overwrite them.
+        app.once('postinitialize', function () {
+            // Replace the template's network copy with the phone's chipset and
+            // a short quality statement. The decorative body icon stays out.
+            var node = app.root.findByName('DiamondV4');
+            var label = node && node.script && node.script.diamondLabel;
+            if (label) {
+                label.titleText = 'MediaTek\\nDimensity 7400';
+                label.bodyText = "Puxta yig'ilgan korpus, sifatli materiallar va har bir detalga berilgan e'tibor Connect U7'ni kundalik foydalanishda ishonchli qiladi.";
+                label.showIcon = false;
+                label.titleGap = 24;
+                label.titleIndent = 0;
+            }
+
+            // The following map caption introduces the product as a national
+            // brand instead of describing Tashkent and mobile coverage.
+            var mapScene = app.root.findByName('sceneDiamondMap');
+            var mapTextEntity = mapScene && mapScene.findByName('text');
+            var mapText = mapTextEntity && mapTextEntity.script && mapTextEntity.script.sceneText;
+            if (mapText) {
+                mapText.titleText = 'Milliy Brend';
+                mapText.bodyText = "O'zbekistonda yaratilgan Connect U7 zamonaviy dizayn, ishonchli sifat va mahalliy yondashuvni birlashtiradi.";
+            }
+        });
+
         var map = app.root.findByName('MAP');
         var glb = app.assets.find('tashkent.glb', 'container');
         var tex = app.assets.find('tashkent.webp', 'texture');

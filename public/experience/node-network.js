@@ -29,12 +29,21 @@
         if (processor) processor.enabled = false;
         var chipcard = app.root.findByName('Chipcard');
         if (chipcard) chipcard.enabled = false;
-        // The 5G beat is out too. Disabled here rather than mid-scene: neither
-        // worldText nor hudText cleans up when its script stops, so the only
-        // way they never show is for their scripts never to start.
-        ['TitleRack', 'Racktxt'].forEach(function (n) {
+        // All template network copy is out too, including the separate
+        // "Tarmoq" corner caption and its description. Disable it before the
+        // text scripts start so none of their generated elements can appear.
+        ['TitleRack', 'Racktxt', 'text'].forEach(function (n) {
             var e = scene.findByName(n);
-            if (e) e.enabled = false;
+            if (!e) return;
+            e.enabled = false;
+
+            // If this runs after script initialisation (for example during a
+            // hot reload), also hide the DOM/mesh the text script already made.
+            if (!e.script) return;
+            e.script.scripts.forEach(function (instance) {
+                if (instance._el) instance._el.style.display = 'none';
+                if (instance._plane) instance._plane.enabled = false;
+            });
         });
         // The rack entity stays: objectFade drives it with the rest of the
         // scene. Only its meshes go.
