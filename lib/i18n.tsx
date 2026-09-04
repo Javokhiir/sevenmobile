@@ -77,7 +77,7 @@ export type Dict = {
 };
 
 const uz: Dict = {
-  nav: { phone: "Telefon", buy: "Sotib olish", service: "Servis", contact: "Aloqa" },
+  nav: { phone: "Telefon", buy: "Do‘kon", service: "Servis", contact: "Aloqa" },
   catalog: {
     title: "Smartfonlar",
     count: "{n} ta mahsulot",
@@ -167,7 +167,7 @@ const uz: Dict = {
 };
 
 const ru: Dict = {
-  nav: { phone: "Телефон", buy: "Купить", service: "Сервис", contact: "Контакты" },
+  nav: { phone: "Телефон", buy: "Магазин", service: "Сервис", contact: "Контакты" },
   catalog: {
     title: "\u0421\u043c\u0430\u0440\u0442\u0444\u043e\u043d\u044b",
     count: "{n} \u0442\u043e\u0432\u0430\u0440\u0430",
@@ -261,7 +261,7 @@ const ru: Dict = {
 };
 
 const en: Dict = {
-  nav: { phone: "Phone", buy: "Buy", service: "Service", contact: "Contact" },
+  nav: { phone: "Phone", buy: "Shop", service: "Service", contact: "Contact" },
   catalog: {
     title: "Smartphones",
     count: "{n} products",

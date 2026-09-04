@@ -149,6 +149,7 @@
         var offA = new pc.Vec3(), offB = new pc.Vec3(), rotA = new pc.Quat(), rotB = new pc.Quat();
         var off = new pc.Vec3(), rot = new pc.Quat(), anchor = new pc.Vec3();
         var pos = new pc.Vec3(), wrot = new pc.Quat(), screen = new pc.Vec3();
+        var vp = new pc.Mat4();
 
         // Camera-space pose that puts a beat's feature point dead centre at its
         // own distance, so the framing follows from the model's own metres
@@ -235,15 +236,28 @@
             anchor.set(k.at[0] * SCALE, k.at[1] * SCALE, k.at[2] * SCALE);
             phone.getRotation().transformVector(anchor, anchor);
             anchor.add(phone.getPosition());
-            cam.camera.worldToScreen(anchor, screen);
+            // Projected here rather than through camera.worldToScreen: that
+            // maps into the graphics device's cached client rect, which on a
+            // phone is whatever the viewport was when the device last resized —
+            // the URL bar sliding away leaves it a browser-bar's height out and
+            // the rings sit off their features. The canvas's live rect is the
+            // only thing the ring can be pinned to.
             var canvas = app.graphicsDevice.canvas;
-            var s = canvas.clientWidth / canvas.width;
-            var x = screen.x * s, y = screen.y * s;
+            var rect = canvas.getBoundingClientRect();
+            vp.mul2(cam.camera.projectionMatrix, cam.camera.viewMatrix);
+            var m = vp.data;
+            var cw = m[3] * anchor.x + m[7] * anchor.y + m[11] * anchor.z + m[15];
+            if (cw <= 1e-6) { el.style.opacity = 0; return; }   // behind the lens
+            screen.x = ((m[0] * anchor.x + m[4] * anchor.y + m[8] * anchor.z + m[12]) / cw
+                * 0.5 + 0.5) * rect.width;
+            screen.y = (0.5 - (m[1] * anchor.x + m[5] * anchor.y + m[9] * anchor.z + m[13]) / cw
+                * 0.5) * rect.height;
+            var x = rect.left + screen.x, y = rect.top + screen.y;
             // A whole-phone beat has no single point to ring, so the card
             // stands clear of the body instead of pointing into it.
             el.firstChild.style.display = k.wide ? 'none' : '';
             card.className = 'ptour-card ' + (k.wide ? 'wide ' : '') +
-                (x > canvas.clientWidth * 0.55 ? 'left' : 'right');
+                (screen.x > rect.width * 0.55 ? 'left' : 'right');
             el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
             el.style.opacity = alpha;
         };

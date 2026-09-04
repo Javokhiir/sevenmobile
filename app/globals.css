@@ -29,6 +29,9 @@
   --font-mono: var(--font-sans), "Helvetica Neue", Arial, sans-serif;
   --hud: clamp(12px, 0.78vw, 14px);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Overshoots a little on the way out: what makes the island read as one
+     object swelling rather than a panel resizing. */
+  --spring: cubic-bezier(0.22, 1.35, 0.36, 1);
 }
 
 * { box-sizing: border-box; }
@@ -1120,6 +1123,8 @@ html.is-gate body {
   align-items: center;
   gap: clamp(18px, 4vw, 54px);
   padding: 10px 14px 10px 12px;
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
   border-radius: 999px;
   background: rgba(18, 21, 27, 0.42);
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -1214,6 +1219,8 @@ html.is-gate body {
   color: var(--paper);
 }
 .island__mark svg { width: clamp(84px, 9vw, 116px); height: auto; display: block; }
+
+.island__menu { display: none; }
 
 .island__nav {
   display: flex;
@@ -1449,9 +1456,238 @@ html.is-gate body {
   }
 }
 
-@media (max-width: 780px) {
-  .island { gap: 12px; padding: 8px 10px; }
-  .island__nav a { padding: 8px 10px; font-size: 13px; }
+/* ---------- the gate on a phone ---------- */
+/* Portrait turns the footage into a crop of one corner of the frame, so it
+   stops filling the screen: it sits across the top at its own aspect, fades out
+   at the bottom edge, and the copy is stacked under it rather than over it. */
+@media (max-width: 620px) {
+  .gate__video {
+    inset: 0 0 auto;
+    height: 56svh;
+    object-fit: contain;
+    object-position: center top;
+    filter: saturate(1.05) contrast(1.02) brightness(0.82);
+    -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 96%);
+    mask-image: linear-gradient(180deg, #000 58%, transparent 96%);
+  }
+  .gate__scrim {
+    background: linear-gradient(180deg, rgba(4, 6, 10, 0.55) 0%,
+      rgba(4, 6, 10, 0.30) 28%, rgba(4, 6, 10, 0.88) 62%, #04060a 88%);
+  }
+  .gate__glow { top: 32%; opacity: 0.22; }
+
+  /* Everything reads bottom-up: the title sits on the fold, the buttons are
+     the last thing above the footer and are the width of the column. */
+  .gate__stage {
+    align-content: end;
+    gap: 16px;
+    padding: 0 20px 6px;
+  }
+  .hero { gap: 14px; }
+  .hero__title { font-size: clamp(2.9rem, 14vw, 4.2rem); line-height: 0.88; }
+  /* The outline weight is drawn for a 130px cap; at a third of that it fills in. */
+  .hero__title span:nth-child(2) { -webkit-text-stroke-width: 1.6px; }
+  .hero__lede {
+    max-width: 33ch;
+    font-size: 15px;
+    line-height: 1.5;
+    color: rgba(242, 244, 248, 0.72);
+  }
+  /* Both paths on one line, at the size that keeps the longer label on a
+     single row: the fork reads as a fork, not as a list. */
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .btn {
+    width: 100%;
+    justify-content: center;
+    gap: 8px;
+    padding: 13px 12px;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+  }
+  .btn i { font-size: 12px; }
+  .btn--primary { box-shadow: 0 10px 30px rgba(255, 255, 255, 0.14); }
+  .readout {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px 16px;
+    padding-top: 14px;
+  }
+  .readout b { font-size: 1.05rem; }
+  .readout span { font-size: 12px; }
+  .gate__foot { padding: 10px 20px 14px; font-size: 12px; }
+}
+
+
+@media (max-width: 900px) {
+  /* A dynamic island: closed it is a pill holding language, mark and burger;
+     opened it swells — the corners unwind from a full round to a soft square,
+     the body deepens and the sections grow inside it. One element throughout,
+     so it reads as the same object changing shape rather than a menu dropping
+     out of a bar. The overshoot in the curve is what sells it. */
+  .island {
+    width: min(calc(100% - 24px), 420px);
+    box-sizing: border-box;
+    justify-self: center;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    margin-top: max(10px, env(safe-area-inset-top));
+    padding: 8px 10px;
+    /* Half the closed height, so shut it is a pill and open it is a rounded
+       square — the same number in both states. Animating a 999px radius looked
+       like the corners squaring off and springing back: the browser clamps it
+       to half the box, so it jumps as the box grows. */
+    border-radius: 30px;
+    background: rgba(12, 14, 18, 0.62);
+    transition: width 0.52s var(--spring), padding 0.52s var(--spring),
+      background 0.4s var(--ease), box-shadow 0.4s var(--ease);
+  }
+  .island--open {
+    width: min(calc(100% - 16px), 460px);
+    padding: 8px 10px 10px;
+    background: rgba(12, 14, 18, 0.86);
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  }
+  .island__mark svg { width: clamp(82px, 27vw, 104px); }
+  .island__menu {
+    display: grid;
+    place-content: center;
+    gap: 6px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--paper);
+    cursor: pointer;
+    transition: background 0.3s var(--ease);
+  }
+  .island__menu {
+    transition: background 0.3s var(--ease), transform 0.5s var(--spring);
+  }
+  .island__menu:hover,
+  .island__menu[aria-expanded="true"] { background: rgba(255, 255, 255, 0.13); }
+  .island__menu[aria-expanded="true"] { transform: rotate(90deg); }
+  .island__menu span {
+    display: block;
+    width: 17px;
+    height: 1.5px;
+    border-radius: 999px;
+    background: currentColor;
+    transition: transform 0.3s var(--ease);
+  }
+  .island__menu[aria-expanded="true"] span:first-child {
+    transform: translateY(3.75px) rotate(45deg);
+  }
+  .island__menu[aria-expanded="true"] span:last-child {
+    transform: translateY(-3.75px) rotate(-45deg);
+  }
+  /* The row does not drop a menu over the page: the bar itself grows, so its
+     bottom line travels down and the three sections arrive inside it as tiles,
+     each carrying its own picture. Closed, it is a zero-height strip and the
+     bar is back to its own height. */
+  .island__nav {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    max-height: 0;
+    margin-top: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    overflow: hidden;
+    transition: max-height 0.42s var(--ease), margin-top 0.42s var(--ease),
+      opacity 0.26s var(--ease), visibility 0.42s;
+  }
+  .island__nav.is-open {
+    max-height: 44vw;
+    margin-top: 10px;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .island__nav a.island__tile {
+    transform: translateY(10px) scale(0.96);
+    opacity: 0;
+    transition: transform 0.5s var(--spring), opacity 0.32s var(--ease),
+      border-color 0.3s var(--ease);
+  }
+  .island__nav.is-open a.island__tile {
+    transform: none;
+    opacity: 1;
+  }
+  .island__nav.is-open a.island__tile:nth-child(1) { transition-delay: 0.06s; }
+  .island__nav.is-open a.island__tile:nth-child(2) { transition-delay: 0.12s; }
+  .island__nav.is-open a.island__tile:nth-child(3) { transition-delay: 0.18s; }
+  /* Written against `.island__nav a` so it outweighs the desktop pill rules
+     the links carry outside this breakpoint. */
+  .island__nav a.island__tile {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    aspect-ratio: 1 / 1;
+    padding: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    background-color: rgba(255, 255, 255, 0.04);
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    overflow: hidden;
+    text-decoration: none;
+    white-space: normal;
+  }
+  /* The 7TECH campaign shots, squared off and cut down to tile size: the phone
+     over an open hand for the experience, both colours together for the shop,
+     the light streams for service. The wash under them keeps the label legible. */
+  .island__nav a.island__tile--phone { background-image: url("/nav/nav-phone.webp"); }
+  .island__nav a.island__tile--buy { background-image: url("/nav/nav-buy.webp"); }
+  .island__nav a.island__tile--service { background-image: url("/nav/nav-service.webp"); }
+  .island__nav a.island__tile::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(6, 7, 10, 0.86) 0%,
+      rgba(6, 7, 10, 0.45) 42%, rgba(6, 7, 10, 0.12) 100%);
+  }
+  .island__nav a.island__tile span {
+    position: relative;
+    font-size: 12px;
+    line-height: 1.15;
+    letter-spacing: 0.02em;
+    color: var(--paper);
+  }
+  .island__nav.is-open a.island__tile:active { transform: scale(0.96); }
+  .island__nav a.island__tile:hover {
+    border-color: rgba(255, 255, 255, 0.28);
+    background-color: rgba(255, 255, 255, 0.04);
+    color: var(--paper);
+  }
+
+  .island.island--fixed {
+    top: max(10px, env(safe-area-inset-top));
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .lang__btn { width: 44px; padding: 0; justify-content: center; }
+  .lang__short { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .island,
+  .island__menu,
+  .island__menu span,
+  .island__nav,
+  .island__nav a.island__tile { transition-duration: 0.01ms; }
+  .island__nav a.island__tile { transform: none; }
 }
 
 /* ============================================================
