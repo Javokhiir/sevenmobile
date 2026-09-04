@@ -9,8 +9,9 @@
 // What follows the cards is the outro the template already had — two black
 // bands closing from the top and the bottom, then the closing lines and shop
 // control. The template's final studio promo ("Now imagine your own") is
-// removed. The outro used to start at 0.83, a long way past the cards; the scene
-// data now starts it at 0.71, so the bands close the moment the deck is done.
+// replaced by a large centred 7TECH mark. The outro used to start at 0.83, a
+// long way past the cards; the scene data now starts it at 0.71, so the bands
+// close the moment the deck is done.
 //
 // The lines it closes on are ours, in the language the site is set to: the same
 // localStorage key lib/i18n.tsx writes, read from inside the frame. The name is
@@ -38,9 +39,12 @@
     var MARK_CSS = '.ec-mark{display:inline-block;vertical-align:-0.045em}' +
         '.ec-mark svg{display:block;height:0.72em;width:auto}' +
         '.ec-mark svg path{opacity:1!important;fill:#fff!important}' +
-        '#ec-final .ec-logo svg{display:block;width:100%;height:auto;opacity:1!important}' +
-        '#ec-final .ec-logo svg path{opacity:1!important;fill:#fff!important;' +
-        'stroke:none!important;stroke-dashoffset:0!important}';
+        '#ec-final{padding:0}' +
+        '#ec-final .ec-shop-logo{width:clamp(280px,42vw,640px);margin:0 auto}' +
+        '#ec-final .ec-shop-logo svg{display:block;width:100%;height:auto;opacity:1!important}' +
+        '#ec-final .ec-shop-logo svg path{opacity:1!important;fill:#fff!important;' +
+        'stroke:none!important;stroke-dashoffset:0!important}' +
+        '@media(max-width:768px){#ec-final .ec-shop-logo{width:clamp(220px,72vw,380px)}}';
     var STORE_KEY = 'sevenmobile.lang';   // lib/i18n.tsx
 
     function lang() {
@@ -87,18 +91,18 @@
 
         if (!car) console.warn('[ending] sceneCar missing, nothing to take out');
 
-        // endingCredits builds this template promo during initialisation. Keep
-        // the closing copy and final control, but remove the entire promo node
-        // (logo, tagline and studio e-mail) on the first frame it exists. Turn
-        // the old replay control into a link to the site's shop at the same time.
-        var promoRemoved = false;
+        // endingCredits builds the template promo during initialisation. Replace
+        // all of its contents with the site's centred logo, then turn the old
+        // replay control into a link to the shop.
+        var shopLogoReady = false;
         var shopControlReady = false;
         app.on('prerender', function () {
-            if (!promoRemoved) {
+            if (!shopLogoReady) {
                 var promo = document.getElementById('ec-final');
-                if (promo) {
-                    promo.remove();
-                    promoRemoved = true;
+                var shopMark = window.__SEVEN_TECH_LOGO_SVG__;
+                if (promo && shopMark) {
+                    promo.innerHTML = '<div class="ec-shop-logo">' + shopMark + '</div>';
+                    shopLogoReady = true;
                 }
             }
 
@@ -147,17 +151,5 @@
             swapped = true;
         });
 
-        // The sign-off carried the studio's mark; the site's own goes there
-        // instead, and it is what the black is left holding at the end. Checked
-        // every frame rather than once: the outro rebuilds this block when the
-        // visitor replays, and it is one attribute lookup.
-        app.on('prerender', function () {
-            var mark = window.__SEVEN_TECH_LOGO_SVG__;
-            if (!mark) return;
-            var logo = document.querySelector('#ec-final .ec-logo');
-            if (!logo || logo.dataset.sevenMark === '1') return;
-            logo.innerHTML = mark;
-            logo.dataset.sevenMark = '1';
-        });
     });
 })();
